@@ -1,37 +1,47 @@
 package hibiscus3000.cellular_automaton.view;
 
 import hibiscus3000.cellular_automaton.model.CellAutomatonEngine;
-import hibiscus3000.cellular_automaton.model.field.BinaryField;
-import hibiscus3000.cellular_automaton.model.field.FieldView;
-import hibiscus3000.cellular_automaton.view.field.BinaryFieldPane;
+import hibiscus3000.cellular_automaton.model.cell.Cell;
+import hibiscus3000.cellular_automaton.model.cell.CellType;
+import hibiscus3000.cellular_automaton.model.field_processor.FieldProcessor;
+import hibiscus3000.cellular_automaton.view.field.BinaryFieldPaneUpdater;
 import hibiscus3000.cellular_automaton.view.field.FieldPane;
+import hibiscus3000.cellular_automaton.view.field.FieldPaneUpdater;
 import hibiscus3000.cellular_automaton.view.field.FieldViewHolder;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
-import java.util.Map;
+public class CellularAutomatonBox extends HBox implements FieldViewHolder, FieldViewUpdaterCreator {
 
-public class CellularAutomatonBox extends HBox implements FieldViewHolder {
-
-    private FieldPane<?> fieldPane;
+    private final VBox fieldPaneBox = new VBox();
+    private FieldPane fieldPane = null;
 
     public CellularAutomatonBox() {
-        final BinaryField field = new BinaryField(30, 30);
-        field.initialize(Map.of());
-        fieldPane = new BinaryFieldPane(field);
-        setHgrow(fieldPane, Priority.ALWAYS);
-        getChildren().add(fieldPane);
-        getChildren().add(new SettingsBox(new CellAutomatonEngine(), this));
+        getChildren().add(fieldPaneBox);
+        setHgrow(fieldPaneBox, Priority.ALWAYS);
+        getChildren().add(new SettingsBox(new CellAutomatonEngine(this), this));
     }
 
     @Override
-    public void setNewFieldView(FieldView<?> fieldView) {
-        if (fieldView instanceof FieldPane<?> fieldPane) {
-            getChildren().remove(fieldPane);
-            this.fieldPane = fieldPane;
-            getChildren().add(fieldPane);
-        } else {
-            throw new RuntimeException("Unknown field view type");
-        }
+    public void setNewFieldView(int rows, int columns) {
+        fieldPaneBox.getChildren().remove(fieldPane);
+        fieldPane = new FieldPane(rows, columns);
+        fieldPaneBox.getChildren().add(fieldPane);
+        VBox.setVgrow(fieldPane, Priority.ALWAYS);
+    }
+
+    @Override
+    public boolean hasFieldView() {
+        return null != fieldPane;
+    }
+
+    @Override
+    public <C extends Cell> void createViewUpdaters(FieldProcessor<C> fieldProcessor,
+                                                    CellType cellType) {
+        final FieldPaneUpdater<C> fieldPaneUpdater = switch (cellType) {
+            case BINARY -> (FieldPaneUpdater<C>) new BinaryFieldPaneUpdater(fieldPane);
+        }; // TODO think of some better way
+        fieldProcessor.addFieldViewUpdater(fieldPaneUpdater);
     }
 }

@@ -10,6 +10,8 @@ import hibiscus3000.cellular_automaton.model.field_processor.FieldProcessor;
 import hibiscus3000.cellular_automaton.model.field_processor.SyncFieldProcessor;
 import hibiscus3000.cellular_automaton.model.function.Function;
 import hibiscus3000.cellular_automaton.model.function.FunctionType;
+import hibiscus3000.cellular_automaton.view.FieldViewUpdaterCreator;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -22,6 +24,8 @@ public class CellAutomatonEngine {
 
     private FieldProcessor<?> fieldProcessor;
 
+    private final FieldViewUpdaterCreator fieldViewUpdaterCreator;
+
     private final Mode defaultMode = Mode.SYNC;
     private final CellType defaultCellType = BINARY;
     private final NeighbourPolicy defaultNeighbourPolicy = NeighbourPolicy.NEIGHBOURS_8;
@@ -31,14 +35,20 @@ public class CellAutomatonEngine {
     private final ObjectProperty<CellType> cellType = new ReadOnlyObjectWrapper<>();
     private final ObjectProperty<Mode> mode = new ReadOnlyObjectWrapper<>();
 
-    private final IntegerProperty rowCount = new ReadOnlyIntegerWrapper();
-    private final IntegerProperty columnCount = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyLongWrapper iteration = new ReadOnlyLongWrapper();
+
+    private static final int INIT_ROWS_COLUMNS = 10;
+
+    private final IntegerProperty rowCount = new SimpleIntegerProperty(INIT_ROWS_COLUMNS);
+    private final IntegerProperty columnCount = new SimpleIntegerProperty(INIT_ROWS_COLUMNS);
 
     private final ReadOnlyBooleanWrapper valid = new ReadOnlyBooleanWrapper();
 
     private final ObservableList<FunctionType> validFunctionTypes = FXCollections.observableArrayList();
 
-    public CellAutomatonEngine() {
+    public CellAutomatonEngine(FieldViewUpdaterCreator fieldViewUpdaterCreator) {
+        this.fieldViewUpdaterCreator = fieldViewUpdaterCreator;
+
         mode.set(defaultMode);
         cellType.set(defaultCellType);
         neighbourPolicy.set(defaultNeighbourPolicy);
@@ -48,45 +58,48 @@ public class CellAutomatonEngine {
         cellType.addListener((observable, oldVal, newVal) -> update(newVal));
         mode.addListener((observable, oldVal, newVal) -> update(newVal));
 
+        valid.bind(Bindings.size(validFunctionTypes).isNotEqualTo(0));
+        
         update();
     }
 
     private void update(FunctionType functionType) {
-        if (functionType != this.functionType.get()) {
-            this.functionType.set(functionType);
-            update();
-        }
+        this.functionType.set(functionType);
+        update();
     }
 
     private void update(NeighbourPolicy neighbourPolicy) {
-        if (neighbourPolicy != this.neighbourPolicy.get()) {
-            this.neighbourPolicy.set(neighbourPolicy);
-            update();
-        }
+        this.neighbourPolicy.set(neighbourPolicy);
+        update();
     }
 
     private void update(CellType cellType) {
-        if (cellType != this.cellType.get()) {
-            this.cellType.set(cellType);
-            update();
-        }
+        this.cellType.set(cellType);
+        update();
     }
 
     private void update(Mode mode) {
-        if (mode != this.mode.get()) {
-            this.mode.set(mode);
-            update();
-        }
+        this.mode.set(mode);
+        update();
     }
 
-    private void update() {
+    public void update() {
+        if (valid.get()) {
+            return;
+        }
         checkAndSetFunctionType();
+        if (!valid.get()) {
+            return;
+        }
         final Function<?> function = functionType.get().createFunction();
         switch (cellType.get()) {
-            case BINARY -> createFieldProcessor((Function<BinaryCell>) function,
+            case BINARY -> createFieldProcessor(BINARY,
+                    (Function<BinaryCell>) function,
                     new BinaryField(rowCount.get(), columnCount.get()),
                     new BinaryField(rowCount.get(), columnCount.get()));
         }
+
+        initialize();
     }
 
     private void checkAndSetFunctionType() {
@@ -97,17 +110,38 @@ public class CellAutomatonEngine {
         if (!validFunctionTypes.contains(functionType.get())) {
             final Optional<FunctionType> fTypeOpt = validFunctionTypes.stream().findAny();
             fTypeOpt.ifPresent(functionType::set);
-            valid.set(fTypeOpt.isPresent());
         }
     }
 
-    private <C extends Cell> void createFieldProcessor(Function<C> function,
+    public boolean updateSize(int rows, int columns) {
+        if (changed(columnCount.get(), columns) || changed(rowCount.get(), rows)) {
+            columnCount.set(columns);
+            rowCount.set(rows);
+            update();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean changed(Integer oldVal, int newVal) {
+        return null == oldVal || oldVal != newVal;
+    }
+
+    private <C extends Cell> void createFieldProcessor(CellType cellType, Function<C> function,
                                                        Field<C> field1, Field<C> field2) {
-        fieldProcessor = switch (mode.get()) {
+        FieldProcessor<C> fieldProcessor = switch (mode.get()) {
             case SYNC -> new SyncFieldProcessor<>(
                     new SerialSyncAutomatonIterator<>(function), neighbourPolicy.get(), field1, field2);
             default -> throw new UnsupportedOperationException("Unsupported mode");
         };
+        fieldViewUpdaterCreator.createViewUpdaters(fieldProcessor, cellType);
+        iteration.unbind();
+        iteration.bind(fieldProcessor.iterationCountProperty());
+        this.fieldProcessor = fieldProcessor;
+    }
+
+    public void initialize() {
+        fieldProcessor.initialize();
     }
 
     public ObjectProperty<FunctionType> functionTypeProperty() {
@@ -142,20 +176,16 @@ public class CellAutomatonEngine {
         return mode.get();
     }
 
-    public IntegerProperty rowCountProperty() {
-        return rowCount;
+    public int getRowCount() {
+        return rowCount.get();
     }
 
-    public IntegerProperty columnCountProperty() {
-        return columnCount;
+    public int getColumnCount() {
+        return columnCount.get();
     }
 
     public ReadOnlyBooleanProperty validProperty() {
         return valid.getReadOnlyProperty();
-    }
-
-    public Field<?> getCurrentField() {
-        return fieldProcessor.getCurrentField();
     }
 
     public ObservableList<FunctionType> getValidFunctionTypes() {
@@ -163,6 +193,6 @@ public class CellAutomatonEngine {
     }
 
     public ReadOnlyLongProperty iterationCountProperty() {
-        return fieldProcessor.iterationCountProperty();
+        return iteration.getReadOnlyProperty();
     }
 }

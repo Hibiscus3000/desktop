@@ -3,9 +3,9 @@ package hibiscus3000.cellular_automaton.model.field_processor;
 import hibiscus3000.cellular_automaton.model.NeighbourPolicy;
 import hibiscus3000.cellular_automaton.model.cell.Cell;
 import hibiscus3000.cellular_automaton.model.field.Field;
-import hibiscus3000.cellular_automaton.model.field.FieldView;
 import hibiscus3000.cellular_automaton.model.field_iterator.AutomatonIterator;
 import hibiscus3000.cellular_automaton.model.field_iterator.IteratorTask;
+import hibiscus3000.cellular_automaton.view.field.FieldViewUpdater;
 import javafx.beans.property.ReadOnlyLongProperty;
 import javafx.beans.property.ReadOnlyLongWrapper;
 
@@ -19,7 +19,7 @@ public abstract class FieldProcessor<C extends Cell> {
 
     protected final ReadOnlyLongWrapper iterationCount = new ReadOnlyLongWrapper();
 
-    private final List<FieldView<C>> fieldViews = new ArrayList<>();
+    private final List<FieldViewUpdater<C>> fieldViewUpdaters = new ArrayList<>();
 
     public FieldProcessor(AutomatonIterator<C> iterator, NeighbourPolicy neighbourPolicy) {
         this.iterator = iterator;
@@ -29,22 +29,22 @@ public abstract class FieldProcessor<C extends Cell> {
 
     public abstract Field<C> getCurrentField();
 
+    public void addFieldViewUpdater(FieldViewUpdater<C> fieldViewUpdater) {
+        fieldViewUpdaters.add(fieldViewUpdater);
+    }
+
+    private void updateAllViews() {
+        for (FieldViewUpdater<C> fieldViewUpdater : fieldViewUpdaters) {
+            fieldViewUpdater.update(getCurrentField());
+        }
+    }
+
     public abstract void iterate();
 
     protected void iterate(IteratorTask<C> task) {
         iterator.apply(task);
-        iterationCount.add(1);
         updateAllViews();
-    }
-
-    public void addFieldView(FieldView<C> fieldView) {
-        fieldViews.add(fieldView);
-    }
-
-    private void updateAllViews() {
-        for (FieldView<C> fieldView : fieldViews) {
-            fieldView.update(getCurrentField());
-        }
+        iterationCount.add(1);
     }
 
     public long getIterationCount() {
@@ -54,4 +54,6 @@ public abstract class FieldProcessor<C extends Cell> {
     public ReadOnlyLongProperty iterationCountProperty() {
         return iterationCount.getReadOnlyProperty();
     }
+
+    public abstract void initialize();
 }

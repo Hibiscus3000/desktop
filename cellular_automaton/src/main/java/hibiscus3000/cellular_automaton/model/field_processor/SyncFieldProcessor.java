@@ -6,6 +6,8 @@ import hibiscus3000.cellular_automaton.model.field.Field;
 import hibiscus3000.cellular_automaton.model.field_iterator.IteratorTask;
 import hibiscus3000.cellular_automaton.model.field_iterator.sync.SyncAutomatonIterator;
 
+import java.util.Map;
+
 public class SyncFieldProcessor<C extends Cell> extends FieldProcessor<C> {
 
     private final Field<C> field1;
@@ -27,9 +29,17 @@ public class SyncFieldProcessor<C extends Cell> extends FieldProcessor<C> {
         iterate(task);
     }
 
+
     @Override
     public Field<C> getCurrentField() {
         return (0 == getIterationCount() % 2 ? field1 : field2);
+    }
+
+    @Override
+    public void initialize() {
+        iterationCount.set(0);
+        field1.initialize(Map.of());
+        field2.initialize(Map.of());
     }
 
 }
