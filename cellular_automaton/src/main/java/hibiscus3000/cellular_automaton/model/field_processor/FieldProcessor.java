@@ -44,7 +44,7 @@ public abstract class FieldProcessor<C extends Cell> {
     protected void iterate(IteratorTask<C> task) {
         iterator.apply(task);
         updateAllViews();
-        iterationCount.add(1);
+        iterationCount.set(iterationCount.get() + 1);
     }
 
     public long getIterationCount() {

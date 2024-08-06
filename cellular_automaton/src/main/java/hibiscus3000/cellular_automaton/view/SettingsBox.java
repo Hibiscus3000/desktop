@@ -26,6 +26,7 @@ public class SettingsBox extends VBox {
     private static String rowsLabelText = "Строк:";
     private static String columnsLabelText = "Столбцов:";
     private static String updateButtonText = "Обновить";
+    private static String iterateButtonText = "Выполнить итерацию";
 
     private final Spinner<Integer> rowsSpinner;
     private final Spinner<Integer> columnsSpinner;
@@ -47,8 +48,10 @@ public class SettingsBox extends VBox {
         rowsSpinner = createSpinner(rowsLabelText, engine.getRowCount());
         columnsSpinner = createSpinner(columnsLabelText, engine.getColumnCount());
         createUpdateButton();
+        createIterateButton();
         update();
     }
+
 
     private Label createIterationLabel() {
         final Label iterationLabel = new Label();
@@ -142,8 +145,7 @@ public class SettingsBox extends VBox {
     }
 
     private Button createUpdateButton() {
-        final Button updateButton = new Button();
-        updateButton.setText(updateButtonText);
+        final Button updateButton = new Button(updateButtonText);
         getChildren().add(updateButton);
         updateButton.setOnAction((event) -> {
             event.consume();
@@ -155,8 +157,19 @@ public class SettingsBox extends VBox {
     private void update() {
         if (engine.updateSize(rowsSpinner.getValue(), columnsSpinner.getValue()) || !fieldViewHolder.hasFieldView()) {
             fieldViewHolder.setNewFieldView(rowsSpinner.getValue(), columnsSpinner.getValue());
+            engine.update();
         } else {
             engine.initialize();
         }
+    }
+
+    private Button createIterateButton() {
+        final Button iterateButton = new Button(iterateButtonText);
+        iterateButton.setOnAction(event -> {
+            event.consume();
+            engine.iterate();
+        });
+        getChildren().add(iterateButton);
+        return iterateButton;
     }
 }

@@ -141,6 +141,10 @@ public class CellAutomatonEngine {
         fieldProcessor.initialize();
     }
 
+    public void iterate() {
+        fieldProcessor.iterate();
+    }
+
     public ObjectProperty<FunctionType> functionTypeProperty() {
         return functionType;
     }
@@ -192,4 +196,5 @@ public class CellAutomatonEngine {
     public ReadOnlyLongProperty iterationCountProperty() {
         return iteration.getReadOnlyProperty();
     }
+
 }

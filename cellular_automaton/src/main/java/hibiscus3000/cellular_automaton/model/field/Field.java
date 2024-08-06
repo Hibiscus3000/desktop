@@ -21,7 +21,7 @@ public abstract class Field<C extends Cell> {
     }
 
     public C getCell(Point coordinates) {
-        return cells[coordinates.getRow()][coordinates.getColumn()];
+        return cells[(rows + coordinates.getRow()) % rows][(columns + coordinates.getColumn()) % columns];
     }
 
     public void setCell(Point coordinates, C cell) {
