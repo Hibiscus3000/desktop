@@ -10,9 +10,6 @@ import javafx.scene.shape.Rectangle;
 
 public class FieldPane extends Pane implements FieldView {
 
-    private final int rows;
-    private final int columns;
-
     private final Rectangle[][] cells;
 
     private final DoubleBinding xSize;
@@ -21,8 +18,6 @@ public class FieldPane extends Pane implements FieldView {
     private final double strokeWidth = 1.5;
 
     public FieldPane(int rows, int columns) {
-        this.rows = rows;
-        this.columns = columns;
         xSize = widthProperty().subtract(strokeWidth).divide(rows);
         ySize = heightProperty().subtract(strokeWidth).divide(columns);
         cells = new Rectangle[rows][columns];
