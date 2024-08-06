@@ -59,7 +59,7 @@ public class CellAutomatonEngine {
         mode.addListener((observable, oldVal, newVal) -> update(newVal));
 
         valid.bind(Bindings.size(validFunctionTypes).isNotEqualTo(0));
-        
+
         update();
     }
 
@@ -84,9 +84,6 @@ public class CellAutomatonEngine {
     }
 
     public void update() {
-        if (valid.get()) {
-            return;
-        }
         checkAndSetFunctionType();
         if (!valid.get()) {
             return;
