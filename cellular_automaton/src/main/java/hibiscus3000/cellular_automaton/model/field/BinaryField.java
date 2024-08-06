@@ -4,6 +4,7 @@ import hibiscus3000.cellular_automaton.model.Point;
 import hibiscus3000.cellular_automaton.model.cell.BinaryCell;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class BinaryField extends Field<BinaryCell> {
 
@@ -21,5 +22,11 @@ public class BinaryField extends Field<BinaryCell> {
                 setCell(coordinates, config.getOrDefault(coordinates, DEFAULT_CELL));
             }
         }
+    }
+
+    @Override
+    public void updateExternal(Point coordinates, Optional<String> input) {
+        setCell(coordinates,
+                new BinaryCell(input.map(Boolean::parseBoolean).orElseGet(() -> !getCell(coordinates).isAlive())));
     }
 }

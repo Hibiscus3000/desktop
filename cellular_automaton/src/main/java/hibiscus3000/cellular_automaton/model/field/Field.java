@@ -7,6 +7,7 @@ import hibiscus3000.cellular_automaton.model.cell.Cell;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class Field<C extends Cell> {
 
@@ -46,5 +47,7 @@ public abstract class Field<C extends Cell> {
     }
 
     public abstract void initialize(Map<Point, C> config);
+
+    public abstract void updateExternal(Point coordinates, Optional<String> input);
 
 }

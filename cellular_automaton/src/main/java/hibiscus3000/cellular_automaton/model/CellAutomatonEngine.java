@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static hibiscus3000.cellular_automaton.model.cell.CellType.BINARY;
 
-public class CellAutomatonEngine {
+public class CellAutomatonEngine implements CellStateChanger {
 
     private FieldProcessor<?> fieldProcessor;
 
@@ -114,7 +114,6 @@ public class CellAutomatonEngine {
         if (changed(columnCount.get(), columns) || changed(rowCount.get(), rows)) {
             columnCount.set(columns);
             rowCount.set(rows);
-            update();
             return true;
         }
         return false;
@@ -129,7 +128,7 @@ public class CellAutomatonEngine {
         FieldProcessor<C> fieldProcessor = switch (mode.get()) {
             case SYNC -> new SyncFieldProcessor<>(
                     new SerialSyncAutomatonIterator<>(function), neighbourPolicy.get(), field1, field2);
-            default -> throw new UnsupportedOperationException("Unsupported mode");
+            default -> throw new UnsupportedOperationException("Unsupported mode"); // TODO
         };
         fieldViewUpdaterCreator.createViewUpdaters(fieldProcessor, cellType);
         iteration.unbind();
@@ -143,6 +142,11 @@ public class CellAutomatonEngine {
 
     public void iterate() {
         fieldProcessor.iterate();
+    }
+
+    @Override
+    public void changeState(Point coordinates, Optional<String> input) {
+        fieldProcessor.changeState(coordinates, input);
     }
 
     public ObjectProperty<FunctionType> functionTypeProperty() {

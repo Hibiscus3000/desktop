@@ -17,16 +17,19 @@ public class CellularAutomatonBox extends HBox implements FieldViewHolder, Field
     private final VBox fieldPaneBox = new VBox();
     private FieldPane fieldPane = null;
 
+    private final CellAutomatonEngine engine;
+
     public CellularAutomatonBox() {
         getChildren().add(fieldPaneBox);
         setHgrow(fieldPaneBox, Priority.ALWAYS);
-        getChildren().add(new SettingsBox(new CellAutomatonEngine(this), this));
+        engine = new CellAutomatonEngine(this);
+        getChildren().add(new SettingsBox(engine, this));
     }
 
     @Override
     public void setNewFieldView(int rows, int columns) {
         fieldPaneBox.getChildren().remove(fieldPane);
-        fieldPane = new FieldPane(rows, columns);
+        fieldPane = new FieldPane(rows, columns, engine);
         fieldPaneBox.getChildren().add(fieldPane);
         VBox.setVgrow(fieldPane, Priority.ALWAYS);
     }
@@ -39,6 +42,9 @@ public class CellularAutomatonBox extends HBox implements FieldViewHolder, Field
     @Override
     public <C extends Cell> void createViewUpdaters(FieldProcessor<C> fieldProcessor,
                                                     CellType cellType) {
+        if (null == fieldPane) {
+            return;
+        }
         final FieldPaneUpdater<C> fieldPaneUpdater = switch (cellType) {
             case BINARY -> (FieldPaneUpdater<C>) new BinaryFieldPaneUpdater(fieldPane);
         }; // TODO think of some better way

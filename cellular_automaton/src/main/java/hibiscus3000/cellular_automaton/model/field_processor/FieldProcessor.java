@@ -1,6 +1,8 @@
 package hibiscus3000.cellular_automaton.model.field_processor;
 
+import hibiscus3000.cellular_automaton.model.CellStateChanger;
 import hibiscus3000.cellular_automaton.model.NeighbourPolicy;
+import hibiscus3000.cellular_automaton.model.Point;
 import hibiscus3000.cellular_automaton.model.cell.Cell;
 import hibiscus3000.cellular_automaton.model.field.Field;
 import hibiscus3000.cellular_automaton.model.field_iterator.AutomatonIterator;
@@ -11,8 +13,9 @@ import javafx.beans.property.ReadOnlyLongWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-public abstract class FieldProcessor<C extends Cell> {
+public abstract class FieldProcessor<C extends Cell> implements CellStateChanger {
 
     protected final AutomatonIterator<C> iterator;
     protected final NeighbourPolicy neighbourPolicy;
@@ -33,7 +36,7 @@ public abstract class FieldProcessor<C extends Cell> {
         fieldViewUpdaters.add(fieldViewUpdater);
     }
 
-    private void updateAllViews() {
+    protected void updateAllViews() {
         for (FieldViewUpdater<C> fieldViewUpdater : fieldViewUpdaters) {
             fieldViewUpdater.update(getCurrentField());
         }
@@ -43,8 +46,8 @@ public abstract class FieldProcessor<C extends Cell> {
 
     protected void iterate(IteratorTask<C> task) {
         iterator.apply(task);
-        updateAllViews();
         iterationCount.set(iterationCount.get() + 1);
+        updateAllViews();
     }
 
     public long getIterationCount() {
@@ -56,4 +59,10 @@ public abstract class FieldProcessor<C extends Cell> {
     }
 
     public abstract void initialize();
+
+    @Override
+    public void changeState(Point coordinates, Optional<String> input) {
+        getCurrentField().updateExternal(coordinates, input);
+        updateAllViews();
+    }
 }

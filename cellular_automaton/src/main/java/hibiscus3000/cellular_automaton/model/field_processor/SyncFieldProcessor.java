@@ -40,6 +40,7 @@ public class SyncFieldProcessor<C extends Cell> extends FieldProcessor<C> {
         iterationCount.set(0);
         field1.initialize(Map.of());
         field2.initialize(Map.of());
+        updateAllViews();
     }
 
 }

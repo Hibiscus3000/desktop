@@ -7,7 +7,7 @@ public class BinaryCell extends Cell {
 
     private boolean alive;
 
-    private BinaryCell(boolean alive) {
+    public BinaryCell(boolean alive) {
         this.alive = alive;
     }
 
