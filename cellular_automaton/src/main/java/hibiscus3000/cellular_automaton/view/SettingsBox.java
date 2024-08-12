@@ -6,6 +6,7 @@ import hibiscus3000.cellular_automaton.model.NeighbourPolicy;
 import hibiscus3000.cellular_automaton.model.cell.CellType;
 import hibiscus3000.cellular_automaton.model.function.FunctionType;
 import hibiscus3000.cellular_automaton.view.field.FieldViewHolder;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -15,6 +16,9 @@ import javafx.scene.layout.VBox;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class SettingsBox extends VBox {
 
@@ -27,12 +31,21 @@ public class SettingsBox extends VBox {
     private static String columnsLabelText = "Столбцов:";
     private static String updateButtonText = "Обновить";
     private static String iterateButtonText = "Выполнить итерацию";
+    private static String constantIterationButtonText = "Итерироваться постоянно";
+    private static String iterationDelayText = "Задержка между итерациями (мс):";
 
     private final Spinner<Integer> rowsSpinner;
     private final Spinner<Integer> columnsSpinner;
+    private final Spinner<Integer> iterationDelaySpinner;
 
     private static int MIN_ROWS_COLUMNS = 3;
     private static int MAX_ROWS_COLUMNS = 50;
+    private static int MIN_ITERATION_DELAY = 200;
+    private static int INITIAL_ITERATION_DELAY_MILLIS = 2000;
+    private static int MAX_ITERATION_DELAY_MILLIS = 24 * 60 * 60 * 1000;
+    private static int ITERATION_DELAY_MILLIS_STEP = 100;
+
+    private ScheduledExecutorService iterationScheduler = Executors.newScheduledThreadPool(1);
 
     public SettingsBox(CellAutomatonEngine engine,
                        FieldViewHolder fieldViewHolder) {
@@ -45,10 +58,16 @@ public class SettingsBox extends VBox {
         createModeGroup();
         createNeighbourPolicyGroup();
 
-        rowsSpinner = createSpinner(rowsLabelText, engine.getRowCount());
-        columnsSpinner = createSpinner(columnsLabelText, engine.getColumnCount());
+        rowsSpinner = createSizeSpinner(rowsLabelText, engine.getRowCount());
+        columnsSpinner = createSizeSpinner(columnsLabelText, engine.getColumnCount());
         createUpdateButton();
         createIterateButton();
+        createConstantIterationButton();
+        iterationDelaySpinner = createSpinner(iterationDelayText,
+                MIN_ITERATION_DELAY,
+                INITIAL_ITERATION_DELAY_MILLIS,
+                MAX_ITERATION_DELAY_MILLIS,
+                ITERATION_DELAY_MILLIS_STEP);
         update();
     }
 
@@ -135,14 +154,29 @@ public class SettingsBox extends VBox {
         return button;
     }
 
-    private Spinner<Integer> createSpinner(String labelText, int initValue) {
+    private Spinner<Integer> createSizeSpinner(String labelText,
+                                               int initValue) {
+        return createSpinner(labelText,
+                MIN_ROWS_COLUMNS,
+                initValue,
+                MAX_ROWS_COLUMNS,
+                1);
+    }
+
+    private Spinner<Integer> createSpinner(String labelText,
+                                           int minValue,
+                                           int initValue,
+                                           int maxValue,
+                                           int step) {
         final Label spinnerLabel = new Label(labelText);
-        final Spinner<Integer> spinner = new Spinner<>(MIN_ROWS_COLUMNS, MAX_ROWS_COLUMNS, initValue);
+        final Spinner<Integer> spinner = new Spinner<>(minValue, maxValue, initValue, step);
+        spinner.setEditable(true);
         final VBox spinnerBox = new VBox();
         spinnerBox.getChildren().addAll(spinnerLabel, spinner);
         getChildren().add(spinnerBox);
         return spinner;
     }
+
 
     private Button createUpdateButton() {
         final Button updateButton = new Button(updateButtonText);
@@ -171,5 +205,24 @@ public class SettingsBox extends VBox {
         });
         getChildren().add(iterateButton);
         return iterateButton;
+    }
+
+    private ToggleButton createConstantIterationButton() {
+        final ToggleButton constantIterationButton = new ToggleButton(constantIterationButtonText);
+        constantIterationButton.setOnAction(e -> {
+            e.consume();
+            scheduleConstantIterationTask(constantIterationButton);
+        });
+        getChildren().add(constantIterationButton);
+        return constantIterationButton;
+    }
+
+    private void scheduleConstantIterationTask(ToggleButton constantIterationButton) {
+        if (constantIterationButton.isSelected()) {
+            iterationScheduler.schedule(() -> {
+                Platform.runLater(engine::iterate);
+                scheduleConstantIterationTask(constantIterationButton);
+            }, iterationDelaySpinner.getValue(), TimeUnit.MILLISECONDS);
+        }
     }
 }
