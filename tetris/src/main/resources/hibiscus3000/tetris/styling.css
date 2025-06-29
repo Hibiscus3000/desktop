@@ -1,0 +1,7 @@
+.control-box {
+    -fx-spacing: 5;
+    -fx-padding: 10;
+}
+.button {
+    -fx-font-size: 14;
+}
