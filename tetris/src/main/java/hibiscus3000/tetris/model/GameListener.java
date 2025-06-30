@@ -10,7 +10,7 @@ public interface GameListener {
 
     default void stop() {
     }
-
+    
     default void changeWidth(int width) {
     }
 

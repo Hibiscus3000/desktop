@@ -97,4 +97,12 @@ public class ControlPanel extends HBox {
         spinner.setEditable(true);
         return spinner;
     }
+
+    public int getFieldWidth() {
+        return widthSpinner.getValue();
+    }
+
+    public int getFieldHeight() {
+        return heightSpinner.getValue();
+    }
 }
