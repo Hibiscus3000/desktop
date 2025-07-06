@@ -2,33 +2,19 @@ package hibiscus3000.tetris.model;
 
 public interface GameListener {
 
-    default void start() {
-    }
+    void start();
 
-    default void pause() {
-    }
+    void pause();
 
-    default void stop() {
-    }
-    
-    default void changeWidth(int width) {
-    }
+    void stop();
 
-    default void changeHeight(int height) {
-    }
+    void moveDown();
 
-    default void moveDown() {
-    }
+    void moveRight();
 
-    default void moveRight() {
-    }
+    void rotateRight();
 
-    default void rotateRight() {
-    }
+    void moveLeft();
 
-    default void moveLeft() {
-    }
-
-    default void rotateLeft() {
-    }
+    void rotateLeft();
 }

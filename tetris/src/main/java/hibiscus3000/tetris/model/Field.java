@@ -21,10 +21,6 @@ public class Field {
     }
 
     public void setOccupied(int w, int h, boolean occupied) {
-        if (field[h][w].getValue() == occupied) {
-            var err = String.format("Trying to set cell (%d, %d) to %b, but it already is", w, h, occupied);
-            throw new RuntimeException(err);
-        }
         field[h][w].setValue(occupied);
     }
 
@@ -42,5 +38,48 @@ public class Field {
 
     public int getHeight() {
         return height;
+    }
+
+    public void clear() {
+        for (int h = 0; h < height; ++h) {
+            for (int w = 0; w < width; ++w) {
+                field[h][w].setValue(false);
+            }
+        }
+    }
+
+    public boolean isLineOccupied(int lineI) {
+        for (int x = 0; x < width; ++x) {
+            if (!field[lineI][x].get()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isLineFree(int lineI) {
+        for (int x = 0; x < width; ++x) {
+            if (field[lineI][x].get()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void clearLine(int lineI) {
+        for (int x = 0; x < width; ++x) {
+            field[lineI][x].setValue(false);
+        }
+    }
+
+    public void shitDownUpTo(int lineI) {
+        for (int x = 0; x < width; ++x) {
+            for (int y = lineI - 1; y > 0; --y) {
+                field[y][x].setValue(field[y - 1][x].getValue());
+            }
+        }
+        for (int x = 0; x < width; ++x) {
+            field[0][x].setValue(false);
+        }
     }
 }

@@ -2,6 +2,7 @@ package hibiscus3000.tetris.view;
 
 import hibiscus3000.tetris.model.Field;
 import javafx.beans.binding.DoubleBinding;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -36,18 +37,22 @@ public class FieldView extends Pane {
                 cell.xProperty().bind(xSize.multiply(w).add(PREF_STROKE_WIDTH / 2));
                 cell.yProperty().bind(ySize.multiply(h).add(PREF_STROKE_WIDTH / 2));
                 cell.setStroke(BORDER_COLOR);
-                cell.setFill(FREE_COLOR);
                 cell.setStrokeWidth(PREF_STROKE_WIDTH);
                 getChildren().add(cell);
                 cells[h][w] = cell;
                 field.getOccupiedProperty(w, h).addListener((observable, oldVal, newVal) -> {
-                    if (newVal) {
-                        cell.setFill(OCCUPIED_COLOR);
-                    } else {
-                        cell.setFill(FREE_COLOR);
-                    }
+                    setCellColor(cell, newVal);
                 });
+                setCellColor(cell, field.getOccupied(w, h));
             }
+        }
+    }
+
+    private void setCellColor(Rectangle cell, boolean isOccupied) {
+        if (isOccupied) {
+            cell.setFill(OCCUPIED_COLOR);
+        } else {
+            cell.setFill(FREE_COLOR);
         }
     }
 }

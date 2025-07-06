@@ -33,10 +33,10 @@ public class ControlPanel extends HBox {
     private Spinner<Integer> widthSpinner;
     private Spinner<Integer> heightSpinner;
 
-    private static final int DEFAULT_WIDTH = 10;
+    private static final int DEFAULT_WIDTH = 7;
     private static final int MIN_WIDTH = 5;
     private static final int MAX_WIDTH = 100;
-    private static final int DEFAULT_HEIGHT = 20;
+    private static final int DEFAULT_HEIGHT = 13;
     private static final int MIN_HEIGHT = 5;
     private static final int MAX_HEIGHT = 100;
     private static final int SPINNER_STEP = 1;

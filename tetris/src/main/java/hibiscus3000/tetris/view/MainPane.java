@@ -1,14 +1,14 @@
 package hibiscus3000.tetris.view;
 
 import hibiscus3000.tetris.model.Field;
+import hibiscus3000.tetris.model.GameManager;
 import hibiscus3000.tetris.view.control.ControlPanel;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 public class MainPane extends BorderPane {
+
+    private volatile boolean eventProcessed = false;
 
     public MainPane() {
         ControlPanel controlPanel = new ControlPanel();
@@ -17,11 +17,26 @@ public class MainPane extends BorderPane {
         setCenter(fieldView);
         Field field = new Field(controlPanel.getFieldWidth(), controlPanel.getFieldHeight());
         fieldView.setField(field);
-
-        final ScheduledExecutorService scheduler =
-                Executors.newSingleThreadScheduledExecutor();
-        scheduler.schedule(() -> field.setOccupied(1, 1, true), 2, TimeUnit.SECONDS);
-        scheduler.schedule(() -> field.setOccupied(3, 3, true), 4, TimeUnit.SECONDS);
-        scheduler.schedule(() -> field.setOccupied(6, 6, true), 6, TimeUnit.SECONDS);
+        GameManager manager = new GameManager(field);
+        controlPanel.addListener(manager);
+        manager.start();
+        addEventFilter(
+                KeyEvent.ANY,
+                event -> {
+                    if (!eventProcessed) {
+                        switch (event.getCode()) {
+                            case S, DOWN -> manager.moveDown();
+                            case A, LEFT -> manager.moveLeft();
+                            case D, RIGHT -> manager.moveRight();
+                            case Q, UP -> manager.rotateLeft();
+                            case E -> manager.rotateRight();
+                            default -> {
+                                return;
+                            }
+                        }
+                    }
+                    eventProcessed = !eventProcessed;
+                    event.consume();
+                });
     }
 }
