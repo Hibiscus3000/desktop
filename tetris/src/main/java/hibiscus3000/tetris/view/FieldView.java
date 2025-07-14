@@ -1,13 +1,15 @@
 package hibiscus3000.tetris.view;
 
 import hibiscus3000.tetris.model.Field;
+import hibiscus3000.tetris.model.figure.ReadOnlyFigure;
+import hibiscus3000.tetris.model.manager.FigureListener;
+import hibiscus3000.tetris.model.math.Point;
 import javafx.beans.binding.DoubleBinding;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-public class FieldView extends Pane {
+public class FieldView extends Pane implements FigureListener {
 
     private DoubleBinding xSize;
     private DoubleBinding ySize;
@@ -17,8 +19,17 @@ public class FieldView extends Pane {
 
     private static final double PREF_STROKE_WIDTH = 2.0;
     private static final Color BORDER_COLOR = Color.BLACK;
-    private static final Color OCCUPIED_COLOR = Color.RED;
+    private static final Color OCCUPIED_COLOR = Color.BLUE;
+    private static final Color[] FIGURE_COLORS = {Color.RED,
+            Color.YELLOW,
+            Color.CHARTREUSE,
+            Color.BLUEVIOLET,
+            Color.DARKTURQUOISE,
+            Color.ORANGERED};
     private static final Color FREE_COLOR = Color.DARKGRAY;
+
+    private ReadOnlyFigure figure = null;
+    private Point figureStartPos = null;
 
     public void setField(Field field) {
         this.field = field;
@@ -53,6 +64,40 @@ public class FieldView extends Pane {
             cell.setFill(OCCUPIED_COLOR);
         } else {
             cell.setFill(FREE_COLOR);
+        }
+    }
+
+    @Override
+    public void newFigure(Point startPos, ReadOnlyFigure figure) {
+        assert null == this.figure;
+        this.figureStartPos = startPos;
+        this.figure = figure;
+        setFigureColorOccupied();
+    }
+
+    @Override
+    public void updateFigurePos(Point figureStartPos) {
+        setFigureColor(FREE_COLOR);
+        this.figureStartPos = figureStartPos;
+        setFigureColorOccupied();
+    }
+
+    @Override
+    public void removeFigure() {
+        setFigureColor(FREE_COLOR);
+    }
+
+    private void setFigureColorOccupied() {
+        setFigureColor(FIGURE_COLORS[figure.getNumberOfPieces() % FIGURE_COLORS.length]);
+    }
+
+    private void setFigureColor(Color color) {
+        for (int w = 0; w < figure.getWidth(); ++w) {
+            for (int h = 0; h < figure.getHeight(); ++h) {
+                if (figure.isOccupied(w, h)) {
+                    cells[figureStartPos.y + h][figureStartPos.x + w].setFill(color);
+                }
+            }
         }
     }
 }

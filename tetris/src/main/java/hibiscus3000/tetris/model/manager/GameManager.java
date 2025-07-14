@@ -1,0 +1,260 @@
+package hibiscus3000.tetris.model.manager;
+
+import hibiscus3000.tetris.model.Field;
+import hibiscus3000.tetris.model.GameListener;
+import hibiscus3000.tetris.model.figure.Figure;
+import hibiscus3000.tetris.model.math.Point;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+
+public class GameManager implements GameListener, AutoCloseable {
+
+    private final Field field;
+    private final Random rnd = new Random();
+
+    private final ScheduledExecutorService gameRunner = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> gameCycle;
+    private boolean gameRunning = false;
+    private boolean gameLost = false;
+    private final ExecutorService userActionController = Executors.newSingleThreadExecutor();
+
+    private Figure figure = null;
+    private final int figureSize = 3;
+    private final Point figureStartPos = new Point();
+    private final List<FigureListener> figureListeners = new ArrayList<>();
+
+    private static final long MILLISECONDS_PER_MOVE = 600;
+
+    public GameManager(Field field) {
+        this.field = field;
+    }
+
+    @Override
+    public void start() {
+        runGame();
+    }
+
+    @Override
+    public void pause() {
+        if (gameRunning) {
+            stopGame();
+        } else {
+            runGame();
+        }
+    }
+
+    @Override
+    public void stop() {
+        stopGame();
+        field.clear();
+        figure = null;
+        gameLost = false;
+    }
+
+    private synchronized void runGame() {
+        if (gameRunning || gameLost) {
+            return;
+        }
+        gameRunning = true;
+        gameRunner.submit(this::runGameCycle);
+    }
+
+    private synchronized void stopGame() {
+        if (!gameRunning) {
+            return;
+        }
+        gameRunning = false;
+        gameCycle.cancel(false);
+    }
+
+    @Override
+    public void close() {
+        gameRunner.shutdown();
+        try {
+            if (!gameRunner.awaitTermination(100, TimeUnit.MILLISECONDS)) {
+                gameRunner.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            gameRunner.shutdownNow();
+        }
+        try {
+            if (!gameRunner.awaitTermination(50, TimeUnit.MILLISECONDS)) {
+                throw new RuntimeException("Unable to shutdown game runner");
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private synchronized void runGameCycle() {
+        if (!gameRunning) {
+            return;
+        }
+        try {
+            if (null == figure) {
+                figure = Figure.generate(figureSize);
+                figureStartPos.x = rnd.nextInt(0, field.getWidth() - figure.getWidth() + 1);
+                figureStartPos.y = 0;
+                if (isFigureMerged(figure, figureStartPos.x, figureStartPos.y)) {
+                    mergeFigure();
+                } else {
+                    notifyNewFigure();
+                }
+            } else {
+                moveFigure(0, 1);
+            }
+            gameCycle = gameRunner.schedule(this::runGameCycle, MILLISECONDS_PER_MOVE, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void moveDown() {
+        submitMove(0, 1);
+    }
+
+    @Override
+    public void moveRight() {
+        submitMove(1, 0);
+    }
+
+    @Override
+    public void moveLeft() {
+        submitMove(-1, 0);
+    }
+
+    private void submitMove(int stepX, int stepY) {
+        userActionController.submit(() -> moveFigure(stepX, stepY));
+    }
+
+    @Override
+    public void rotateRight() {
+        submitRotate(true);
+    }
+
+    @Override
+    public void rotateLeft() {
+        submitRotate(false);
+    }
+
+    private void submitRotate(boolean clockwise) {
+        userActionController.submit(() -> rotateFigure(clockwise));
+    }
+
+    private void rotateFigure(boolean clockwise) {
+        updateFigure(() -> {
+            Figure rotatedFigure = figure.rotate(clockwise);
+            if (isFigureMergedShift(rotatedFigure, 0, 0)) {
+                mergeFigure();
+                return;
+            }
+            figure = rotatedFigure;
+            notifyRemoval();
+            notifyNewFigure();
+        });
+    }
+
+    private void moveFigure(int stepX, int stepY) {
+        updateFigure(() -> {
+            int newStartX = figureStartPos.x + stepX;
+            newStartX = Math.max(newStartX, 0);
+            newStartX = Math.min(newStartX, field.getWidth() - figure.getWidth());
+            int newStartY = figureStartPos.y + stepY;
+            if (isFigureMerged(figure, newStartX, newStartY)) {
+                mergeFigure();
+                return;
+            }
+            figureStartPos.x = newStartX;
+            figureStartPos.y = newStartY;
+            notifyFigurePos();
+        });
+    }
+
+    private synchronized void updateFigure(Runnable updater) {
+        if (!gameRunning) {
+            return;
+        }
+        if (null == figure) {
+            return;
+        }
+        updater.run();
+    }
+
+    private boolean isFigureMergedShift(Figure figure, int shiftX, int shiftY) {
+        int startX = this.figureStartPos.x + shiftX;
+        int startY = this.figureStartPos.y + shiftY;
+        return isFigureMerged(figure, startX, startY);
+    }
+
+    private boolean isFigureMerged(Figure figure, int startX, int startY) {
+        if (startY + figure.getHeight() > field.getHeight()) {
+            return true;
+        }
+        for (int x = 0; x < figure.getWidth(); ++x) {
+            for (int y = 0; y < figure.getHeight(); ++y) {
+                if (figure.isOccupied(x, y) && field.getOccupied(x + startX, y + startY)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void mergeFigure() {
+        notifyRemoval();
+        occupyFigureCells();
+        freeLines();
+        figure = null;
+        if (!field.isLineFree(0)) {
+            stopGame();
+            gameLost = true;
+        }
+    }
+
+    private void occupyFigureCells() {
+        for (int x = 0; x < figure.getWidth(); ++x) {
+            for (int y = 0; y < figure.getHeight(); ++y) {
+                if (figure.isOccupied(x, y)) {
+                    field.setOccupied(figureStartPos.x + x, figureStartPos.y + y, true);
+                }
+            }
+        }
+    }
+
+    private void freeLines() {
+        for (int y = 0; y < figure.getHeight(); ++y) {
+            int lineI = figureStartPos.y + y;
+            if (field.isLineOccupied(lineI)) {
+                field.clearLine(lineI);
+                field.shitDownUpTo(lineI + 1);
+            }
+        }
+    }
+
+    public void addFigureListener(FigureListener listener) {
+        figureListeners.add(listener);
+    }
+
+    private void notifyRemoval() {
+        notifyFigureListeners(listener -> listener.removeFigure());
+    }
+
+    private void notifyNewFigure() {
+        notifyFigureListeners(listener -> listener.newFigure(new Point(figureStartPos), figure));
+    }
+
+    private void notifyFigurePos() {
+        notifyFigureListeners(listener -> listener.updateFigurePos(new Point(figureStartPos)));
+    }
+
+    private void notifyFigureListeners(Consumer<FigureListener> notifier) {
+        for (FigureListener listener : figureListeners) {
+            notifier.accept(listener);
+        }
+    }
+}
