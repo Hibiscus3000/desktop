@@ -77,6 +77,9 @@ public class FieldView extends Pane implements FigureListener {
 
     @Override
     public void updateFigurePos(Point figureStartPos) {
+        if (null == figure) {
+            return;
+        }
         setFigureColor(FREE_COLOR);
         this.figureStartPos = figureStartPos;
         setFigureColorOccupied();
@@ -84,7 +87,9 @@ public class FieldView extends Pane implements FigureListener {
 
     @Override
     public void removeFigure() {
-        setFigureColor(FREE_COLOR);
+        if (null != figure) {
+            setFigureColor(FREE_COLOR);
+        }
     }
 
     private void setFigureColorOccupied() {

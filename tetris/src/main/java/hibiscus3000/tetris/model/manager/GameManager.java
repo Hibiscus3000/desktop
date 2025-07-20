@@ -1,9 +1,10 @@
 package hibiscus3000.tetris.model.manager;
 
 import hibiscus3000.tetris.model.Field;
-import hibiscus3000.tetris.model.GameListener;
 import hibiscus3000.tetris.model.figure.Figure;
 import hibiscus3000.tetris.model.math.Point;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +19,9 @@ public class GameManager implements GameListener, AutoCloseable {
 
     private final ScheduledExecutorService gameRunner = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> gameCycle;
-    private boolean gameRunning = false;
-    private boolean gameLost = false;
+    private ReadOnlyBooleanWrapper gameInProgress = new ReadOnlyBooleanWrapper(false);
+    private ReadOnlyBooleanWrapper gameLost = new ReadOnlyBooleanWrapper(false);
+    private ReadOnlyBooleanWrapper gameRunning = new ReadOnlyBooleanWrapper(false);
     private final ExecutorService userActionController = Executors.newSingleThreadExecutor();
 
     private Figure figure = null;
@@ -40,8 +42,8 @@ public class GameManager implements GameListener, AutoCloseable {
 
     @Override
     public void pause() {
-        if (gameRunning) {
-            stopGame();
+        if (gameRunning.get()) {
+            pauseGame();
         } else {
             runGame();
         }
@@ -50,26 +52,35 @@ public class GameManager implements GameListener, AutoCloseable {
     @Override
     public void stop() {
         stopGame();
-        field.clear();
-        figure = null;
-        notifyRemoval();
-        gameLost = false;
     }
 
     private synchronized void runGame() {
-        if (gameRunning || gameLost) {
+        if (gameRunning.get()) {
             return;
         }
-        gameRunning = true;
+        if (gameLost.get()) {
+            stopGame();
+        }
+        gameInProgress.set(true);
+        gameRunning.set(true);
         gameRunner.submit(this::runGameCycle);
     }
 
-    private synchronized void stopGame() {
-        if (!gameRunning) {
+    private synchronized void pauseGame() {
+        if (!gameRunning.get()) {
             return;
         }
-        gameRunning = false;
+        gameRunning.set(false);
         gameCycle.cancel(false);
+    }
+    
+    private synchronized void stopGame() {
+        pauseGame();
+        field.clear();
+        figure = null;
+        notifyRemoval();
+        gameLost.set(false);
+        gameInProgress.set(false);
     }
 
     @Override
@@ -92,7 +103,7 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private synchronized void runGameCycle() {
-        if (!gameRunning) {
+        if (!gameRunning.get()) {
             return;
         }
         try {
@@ -144,6 +155,21 @@ public class GameManager implements GameListener, AutoCloseable {
         submitRotate(false);
     }
 
+    @Override
+    public ReadOnlyBooleanProperty getGameInProgressProperty() {
+        return gameInProgress.getReadOnlyProperty();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty getGameLostProperty() {
+        return gameLost.getReadOnlyProperty();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty getGameRunningProperty() {
+        return gameRunning.getReadOnlyProperty();
+    }
+
     private void submitRotate(boolean clockwise) {
         userActionController.submit(() -> rotateFigure(clockwise));
     }
@@ -177,7 +203,7 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private synchronized void updateFigure(Runnable updater) {
-        if (!gameRunning) {
+        if (!gameRunning.get()) {
             return;
         }
         if (null == figure) {
@@ -218,8 +244,8 @@ public class GameManager implements GameListener, AutoCloseable {
         freeLines();
         figure = null;
         if (!field.isLineFree(0)) {
-            stopGame();
-            gameLost = true;
+            pauseGame();
+            gameLost.set(true);
         }
     }
 
@@ -234,7 +260,7 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private void freeLines() {
-        for (int y = 0; y <= figure.getLowestOccupiedCell(); ++y) {
+        for (int y = figure.getHighestOccupiedCell(); y <= figure.getLowestOccupiedCell(); ++y) {
             int lineI = figureStartPos.y + y;
             if (field.isLineOccupied(lineI)) {
                 field.clearLine(lineI);
@@ -258,7 +284,7 @@ public class GameManager implements GameListener, AutoCloseable {
     private void notifyFigurePos() {
         notifyFigureListeners(listener -> listener.updateFigurePos(new Point(figureStartPos)));
     }
-
+    
     private void notifyFigureListeners(Consumer<FigureListener> notifier) {
         for (FigureListener listener : figureListeners) {
             notifier.accept(listener);

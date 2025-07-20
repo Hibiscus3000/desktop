@@ -1,7 +1,9 @@
 package hibiscus3000.tetris.view.control;
 
-import hibiscus3000.tetris.model.GameListener;
+import hibiscus3000.tetris.model.manager.GameListener;
+import hibiscus3000.tetris.view.FieldController;
 import hibiscus3000.tetris.view.IntSpinnerValueFactory;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Spinner;
@@ -15,7 +17,8 @@ import java.util.function.Consumer;
 
 public class ControlPanel extends HBox {
 
-    private final List<GameListener> listeners = new ArrayList<>();
+    private GameListener mainListener;
+    private final FieldController fieldController;
 
     private final VBox buttonBox = new VBox();
     private final VBox sizeSettingBox = new VBox();
@@ -41,27 +44,16 @@ public class ControlPanel extends HBox {
     private static final int MAX_HEIGHT = 100;
     private static final int SPINNER_STEP = 1;
 
-    public ControlPanel() {
+    public ControlPanel(FieldController fieldController) {
+        this.fieldController = fieldController;
         setAlignment(Pos.CENTER);
         createButtonBox();
         createSizeSettingBox();
         getChildren().addAll(buttonBox, sizeSettingBox);
     }
-
-    public void addListener(GameListener listener) {
-        listeners.add(listener);
-    }
-
-    private void applyToAllListeners(Consumer<GameListener> callback) {
-        for (var listener : listeners) {
-            callback.accept(listener);
-        }
-    }
-
-    private void applyToAllListeners(BiConsumer<GameListener, Integer> callback, int arg) {
-        for (var listener : listeners) {
-            callback.accept(listener, arg);
-        }
+    
+    public synchronized void setMainListener(GameListener mainListener) {
+        this.mainListener = mainListener;
     }
 
     private void createButtonBox() {
@@ -76,7 +68,7 @@ public class ControlPanel extends HBox {
     private Button createButton(String label, Consumer<GameListener> callback) {
         Button button = new Button(label);
         button.setOnAction(e -> {
-            applyToAllListeners(callback);
+            callback.accept(mainListener);
             e.consume();
         });
         button.setMaxWidth(Double.MAX_VALUE);
@@ -87,7 +79,9 @@ public class ControlPanel extends HBox {
         assert null == widthSpinner && null == heightSpinner : "Can only call it once";
         sizeSettingBox.getStyleClass().add(CONTROL_BOX_STYLE);
         widthSpinner = createSpinner(DEFAULT_WIDTH, MIN_WIDTH, MAX_WIDTH);
+        widthSpinner.valueProperty().addListener(((observable, oldWidth, newWidth) -> fieldController.setField(newWidth, heightSpinner.getValue())));
         heightSpinner = createSpinner(DEFAULT_HEIGHT, MIN_HEIGHT, MAX_HEIGHT);
+        heightSpinner.valueProperty().addListener(((observable, oldHeight, newHeight) -> fieldController.setField(widthSpinner.getValue(), newHeight)));
         sizeSettingBox.getChildren().addAll(widthSpinner, heightSpinner);
     }
 
@@ -104,5 +98,15 @@ public class ControlPanel extends HBox {
 
     public int getFieldHeight() {
         return heightSpinner.getValue();
+    }
+
+    public void setGameProperties(ReadOnlyBooleanProperty gameInProgressProperty,
+                                  ReadOnlyBooleanProperty gameRunningProperty,
+                                  ReadOnlyBooleanProperty gameLostProperty) {
+        var disableProperty = gameInProgressProperty.and(gameLostProperty.not());
+        widthSpinner.disableProperty().unbind();
+        widthSpinner.disableProperty().bind(disableProperty);
+        heightSpinner.disableProperty().unbind();
+        heightSpinner.disableProperty().bind(disableProperty);
     }
 }
