@@ -52,6 +52,7 @@ public class GameManager implements GameListener, AutoCloseable {
         stopGame();
         field.clear();
         figure = null;
+        notifyRemoval();
         gameLost = false;
     }
 
