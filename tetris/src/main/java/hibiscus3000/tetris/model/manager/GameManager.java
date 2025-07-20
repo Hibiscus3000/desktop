@@ -97,8 +97,9 @@ public class GameManager implements GameListener, AutoCloseable {
         try {
             if (null == figure) {
                 figure = Figure.generate(figureSize);
-                figureStartPos.x = rnd.nextInt(0, field.getWidth() - figure.getWidth() + 1);
-                figureStartPos.y = 0;
+                figureStartPos.x = rnd.nextInt(-figure.getLeftmostOccupiedCell(),
+                        field.getWidth() - figure.getRightmostOccupiedCell());
+                figureStartPos.y = -figure.getHighestOccupiedCell();
                 if (isFigureMerged(figure, figureStartPos.x, figureStartPos.y)) {
                     mergeFigure();
                 } else {
@@ -150,7 +151,6 @@ public class GameManager implements GameListener, AutoCloseable {
         updateFigure(() -> {
             Figure rotatedFigure = figure.rotate(clockwise);
             if (isFigureMergedShift(rotatedFigure, 0, 0)) {
-                mergeFigure();
                 return;
             }
             figure = rotatedFigure;
@@ -162,8 +162,8 @@ public class GameManager implements GameListener, AutoCloseable {
     private void moveFigure(int stepX, int stepY) {
         updateFigure(() -> {
             int newStartX = figureStartPos.x + stepX;
-            newStartX = Math.max(newStartX, 0);
-            newStartX = Math.min(newStartX, field.getWidth() - figure.getWidth());
+            newStartX = Math.max(newStartX, -figure.getLeftmostOccupiedCell());
+            newStartX = Math.min(newStartX, field.getWidth() - figure.getRightmostOccupiedCell() - 1);
             int newStartY = figureStartPos.y + stepY;
             if (isFigureMerged(figure, newStartX, newStartY)) {
                 mergeFigure();
@@ -192,11 +192,17 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private boolean isFigureMerged(Figure figure, int startX, int startY) {
-        if (startY + figure.getHeight() > field.getHeight()) {
+        if (startY + figure.getLowestOccupiedCell() >= field.getHeight()) {
             return true;
         }
-        for (int x = 0; x < figure.getWidth(); ++x) {
-            for (int y = 0; y < figure.getHeight(); ++y) {
+        if (startX + figure.getLeftmostOccupiedCell() < 0) {
+            return true;
+        }
+        if (startX + figure.getRightmostOccupiedCell() >= field.getWidth()) {
+            return true;
+        }
+        for (int x = 0; x <= figure.getRightmostOccupiedCell(); ++x) {
+            for (int y = 0; y <= figure.getLowestOccupiedCell(); ++y) {
                 if (figure.isOccupied(x, y) && field.getOccupied(x + startX, y + startY)) {
                     return true;
                 }
@@ -217,8 +223,8 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private void occupyFigureCells() {
-        for (int x = 0; x < figure.getWidth(); ++x) {
-            for (int y = 0; y < figure.getHeight(); ++y) {
+        for (int x = 0; x < figure.getSize(); ++x) {
+            for (int y = 0; y < figure.getSize(); ++y) {
                 if (figure.isOccupied(x, y)) {
                     field.setOccupied(figureStartPos.x + x, figureStartPos.y + y, true);
                 }
@@ -227,7 +233,7 @@ public class GameManager implements GameListener, AutoCloseable {
     }
 
     private void freeLines() {
-        for (int y = 0; y < figure.getHeight(); ++y) {
+        for (int y = 0; y <= figure.getLowestOccupiedCell(); ++y) {
             int lineI = figureStartPos.y + y;
             if (field.isLineOccupied(lineI)) {
                 field.clearLine(lineI);

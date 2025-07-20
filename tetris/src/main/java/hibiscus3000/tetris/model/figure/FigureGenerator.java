@@ -23,21 +23,20 @@ public class FigureGenerator {
     }
 
     public Figure generate() {
-        return FigureFramer.createFigureFromRawPieces(new boolean[][]{{true, true, true}, {false, true, false}, {false, false, false}}, 3);
-//        lastPieceX = getInitCoord();
-//        lastPieceY = getInitCoord();
-//        while (true) {
-//            var availablePoses = getAvailablePositions();
-//            if (availablePoses.isEmpty() || !shouldAddNextPiece()) {
-//                break;
-//            }
-//            var nextPieceId = availablePoses.get(rnd.nextInt(0, availablePoses.size()));
-//            lastPieceX = nextPieceId.getKey();
-//            lastPieceY = nextPieceId.getValue();
-//            ++pieces;
-//            values[lastPieceY][lastPieceX] = true;
-//        }
-//        return FigureFramer.createFigureFromRawPieces(values, pieces);
+        lastPieceX = getInitCoord();
+        lastPieceY = getInitCoord();
+        while (true) {
+            var availablePoses = getAvailablePositions();
+            if (availablePoses.isEmpty() || !shouldAddNextPiece()) {
+                break;
+            }
+            var nextPieceId = availablePoses.get(rnd.nextInt(0, availablePoses.size()));
+            lastPieceX = nextPieceId.getKey();
+            lastPieceY = nextPieceId.getValue();
+            ++pieces;
+            values[lastPieceY][lastPieceX] = true;
+        }
+        return FigureFramer.createFigureFromRawPieces(values, pieces);
     }
 
     private int getInitCoord() {

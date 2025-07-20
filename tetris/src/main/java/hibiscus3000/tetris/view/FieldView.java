@@ -92,8 +92,8 @@ public class FieldView extends Pane implements FigureListener {
     }
 
     private void setFigureColor(Color color) {
-        for (int w = 0; w < figure.getWidth(); ++w) {
-            for (int h = 0; h < figure.getHeight(); ++h) {
+        for (int w = 0; w < figure.getSize(); ++w) {
+            for (int h = 0; h < figure.getSize(); ++h) {
                 if (figure.isOccupied(w, h)) {
                     cells[figureStartPos.y + h][figureStartPos.x + w].setFill(color);
                 }
