@@ -29,7 +29,7 @@ public class GameManager implements GameListener, AutoCloseable {
     private final Point figureStartPos = new Point();
     private final List<FigureListener> figureListeners = new ArrayList<>();
 
-    private static final long MILLISECONDS_PER_MOVE = 600;
+    private static final long MILLISECONDS_PER_MOVE = 350;
 
     public GameManager(Field field) {
         this.field = field;

@@ -33,6 +33,7 @@ public class MainPane extends BorderPane implements FieldController {
                 case D -> gameManager.moveRight();
                 case Q -> gameManager.rotateLeft();
                 case E -> gameManager.rotateRight();
+                case W -> gameManager.rotateRight();
                 default -> {
                     return;
                 }
